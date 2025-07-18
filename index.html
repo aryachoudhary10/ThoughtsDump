@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Thought Dump</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- GSAP for animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    
+    <!-- html2canvas for saving as image -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=DM+Serif+Display&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+
+    <style>
+        /* Custom font styles */
+        .font-dm-serif { font-family: 'DM Serif Display', serif; }
+        .font-caveat { font-family: 'Caveat', cursive; }
+        .font-inter { font-family: 'Inter', sans-serif; }
+
+        /* Base styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #faf7f0;
+            color: #222;
+            transition: background-color 0.5s ease, color 0.5s ease;
+            overflow: hidden; /* Prevent scrollbars from thought overflow */
+        }
+
+        /* Dark mode styles */
+        .dark body {
+            background-color: #0d0d0d;
+            color: #f0ebe3;
+        }
+        .dark .thought-bubble {
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 15px rgba(179, 229, 252, 0.2), 0 0 5px rgba(255, 204, 213, 0.2);
+            color: #f6f1e9;
+            text-shadow: 0 0 8px #b3e5fc, 0 0 2px #ffccd5;
+        }
+        .dark .starry-sky {
+            opacity: 1;
+        }
+
+        /* Thought input styling */
+        #thought-input {
+            position: absolute;
+            z-index: 100;
+            display: none;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .dark #thought-input {
+            background: #1a1a1a;
+            border-color: #444;
+            color: #f0ebe3;
+        }
+
+        /* Thought bubble styling */
+        .thought-bubble {
+            position: absolute;
+            padding: 12px 20px;
+            background-color: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            cursor: grab;
+            user-select: none;
+            font-size: 22px;
+            line-height: 1.4;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            max-width: 300px;
+            word-wrap: break-word;
+        }
+        .thought-bubble:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+        }
+        .thought-bubble:active {
+            cursor: grabbing;
+            z-index: 50;
+        }
+
+        /* Starry sky background for dark mode */
+        .starry-sky {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            opacity: 0;
+            transition: opacity 0.8s ease;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="font-inter">
+
+    <div id="thought-canvas" class="w-screen h-screen relative cursor-text">
+        <!-- Starry Sky for Dark Mode -->
+        <div id="star-container" class="starry-sky"></div>
+    </div>
+
+    <!-- Top Left UI -->
+    <div class="absolute top-6 left-6 md:top-8 md:left-8 z-20">
+        <h1 class="font-dm-serif text-3xl md:text-4xl">Visual Thought Dump</h1>
+        <p class="text-sm md:text-base opacity-70 mt-1">Click anywhere to drop a thought.</p>
+    </div>
+
+    <!-- Top Right UI Controls -->
+    <div class="absolute top-6 right-6 md:top-8 md:right-8 z-20 flex items-center space-x-3">
+        <button id="clear-btn" title="Clear Mind" class="px-3 py-2 bg-white/50 dark:bg-black/50 backdrop-blur-sm rounded-lg shadow-sm hover:bg-white/80 dark:hover:bg-black/80 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5c-7.2 0-9 3.6-9 9s1.8 9 9 9 9-3.6 9-9-1.8-9-9-9z"/><path d="M14.5 9.5l-5 5"/><path d="M9.5 9.5l5 5"/></svg>
+        </button>
+        <button id="save-btn" title="Save as Image" class="px-3 py-2 bg-white/50 dark:bg-black/50 backdrop-blur-sm rounded-lg shadow-sm hover:bg-white/80 dark:hover:bg-black/80 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </button>
+        <button id="dark-mode-toggle" title="Toggle Dark Mode" class="px-3 py-2 bg-white/50 dark:bg-black/50 backdrop-blur-sm rounded-lg shadow-sm hover:bg-white/80 dark:hover:bg-black/80 transition">
+            <svg id="moon-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+            <svg id="sun-icon" class="hidden" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+        </button>
+    </div>
+
+    <!-- Hidden input field -->
+    <input type="text" id="thought-input" class="font-caveat" placeholder="Type a thought, press Enter...">
+
+    <script>
+        const canvas = document.getElementById('thought-canvas');
+        const input = document.getElementById('thought-input');
+        const saveBtn = document.getElementById('save-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        const moonIcon = document.getElementById('moon-icon');
+        const sunIcon = document.getElementById('sun-icon');
+        const starContainer = document.getElementById('star-container');
+
+        let thoughts = [];
+        let chimeSound;
+
+        // --- Initialization ---
+        function init() {
+            // Create a reusable audio object
+            chimeSound = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU'+Array(300).join('123'));
+            chimeSound.volume = 0.3;
+
+            canvas.addEventListener('click', showInput);
+            input.addEventListener('keydown', handleInput);
+            saveBtn.addEventListener('click', saveAsImage);
+            clearBtn.addEventListener('click', clearMind);
+            darkModeToggle.addEventListener('click', toggleDarkMode);
+            
+            // Create stars for dark mode
+            createStars(100);
+        }
+
+        // --- Thought Creation ---
+        function showInput(e) {
+            // Only show if clicking on the canvas itself, not a thought
+            if (e.target !== canvas) return;
+            input.style.display = 'block';
+            input.style.left = `${e.clientX - input.offsetWidth / 2}px`;
+            input.style.top = `${e.clientY - input.offsetHeight / 2}px`;
+            input.focus();
+        }
+
+        function handleInput(e) {
+            if (e.key === 'Enter' && input.value.trim() !== '') {
+                createThought(input.value.trim(), parseInt(input.style.left), parseInt(input.style.top));
+                input.value = '';
+                input.style.display = 'none';
+            } else if (e.key === 'Escape') {
+                input.value = '';
+                input.style.display = 'none';
+            }
+        }
+
+        function createThought(text, x, y) {
+            const thoughtEl = document.createElement('div');
+            thoughtEl.className = 'thought-bubble font-caveat';
+            thoughtEl.textContent = text;
+            
+            // Position it centered on the click
+            thoughtEl.style.left = `${x}px`;
+            thoughtEl.style.top = `${y}px`;
+            
+            canvas.appendChild(thoughtEl);
+            thoughts.push(thoughtEl);
+            
+            chimeSound.play().catch(e => console.log("Sound play interrupted"));
+            
+            makeDraggable(thoughtEl);
+            animateThoughtIn(thoughtEl);
+        }
+
+        // --- Animations ---
+        function animateThoughtIn(el) {
+            const animations = ['floatUp', 'scatter', 'fadeIn', 'spinIn'];
+            const randomAnimation = animations[Math.floor(Math.random() * animations.length)];
+
+            gsap.set(el, { scale: 0, opacity: 0 });
+
+            switch (randomAnimation) {
+                case 'floatUp':
+                    gsap.to(el, { 
+                        scale: 1, 
+                        opacity: 1, 
+                        y: '-=100', 
+                        duration: 1.5, 
+                        ease: 'power2.out' 
+                    });
+                    gsap.to(el, {
+                        y: '+=20',
+                        x: '+=15',
+                        repeat: -1,
+                        yoyo: true,
+                        duration: 4,
+                        ease: 'sine.inOut',
+                        delay: 1.5
+                    });
+                    break;
+                case 'scatter':
+                    gsap.to(el, {
+                        scale: 1,
+                        opacity: 1,
+                        x: (Math.random() - 0.5) * 200,
+                        y: (Math.random() - 0.5) * 200,
+                        duration: 1,
+                        ease: 'power3.out'
+                    });
+                    break;
+                case 'spinIn':
+                     gsap.to(el, {
+                        scale: 1,
+                        opacity: 1,
+                        rotation: 360,
+                        duration: 1,
+                        ease: 'back.out(1.7)'
+                    });
+                    break;
+                default: // fadeIn
+                    gsap.to(el, { scale: 1, opacity: 1, duration: 0.8, ease: 'expo.out' });
+                    break;
+            }
+        }
+
+        function clearMind() {
+            thoughts.forEach(el => {
+                gsap.to(el, {
+                    x: (Math.random() - 0.5) * window.innerWidth,
+                    y: (Math.random() - 0.5) * window.innerHeight,
+                    scale: 0,
+                    opacity: 0,
+                    rotation: Math.random() * 720 - 360,
+                    duration: 1,
+                    ease: 'power3.in',
+                    onComplete: () => el.remove()
+                });
+            });
+            thoughts = [];
+        }
+
+        // --- Interactivity ---
+        function makeDraggable(el) {
+            let isDragging = false;
+            let offsetX, offsetY;
+
+            el.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                el.style.cursor = 'grabbing';
+                offsetX = e.clientX - el.offsetLeft;
+                offsetY = e.clientY - el.offsetTop;
+                // Stop any ongoing GSAP animations on this element
+                gsap.killTweensOf(el);
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    el.style.left = `${e.clientX - offsetX}px`;
+                    el.style.top = `${e.clientY - offsetY}px`;
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+                el.style.cursor = 'grab';
+            });
+        }
+
+        // --- UI Controls ---
+        function saveAsImage() {
+            // Temporarily hide UI elements for the screenshot
+            const uiElements = document.querySelectorAll('.absolute.top-6');
+            uiElements.forEach(el => el.style.visibility = 'hidden');
+
+            html2canvas(document.body, { 
+                backgroundColor: document.documentElement.classList.contains('dark') ? '#0d0d0d' : '#faf7f0',
+                logging: false
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'thought-map.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                
+                // Show UI elements again
+                uiElements.forEach(el => el.style.visibility = 'visible');
+            });
+        }
+
+        function toggleDarkMode() {
+            const html = document.documentElement;
+            html.classList.toggle('dark');
+            const isDark = html.classList.contains('dark');
+            moonIcon.classList.toggle('hidden', isDark);
+            sunIcon.classList.toggle('hidden', !isDark);
+        }
+        
+        // --- Starry Sky Effect ---
+        function createStars(count) {
+            for (let i = 0; i < count; i++) {
+                const star = document.createElement('div');
+                star.className = 'absolute bg-white rounded-full';
+                const size = Math.random() * 2 + 0.5;
+                star.style.width = `${size}px`;
+                star.style.height = `${size}px`;
+                star.style.left = `${Math.random() * 100}%`;
+                star.style.top = `${Math.random() * 100}%`;
+                star.style.opacity = Math.random() * 0.5 + 0.2;
+                
+                // Animate stars
+                gsap.to(star, {
+                    opacity: Math.random() * 0.5 + 0.2,
+                    duration: Math.random() * 2 + 1,
+                    repeat: -1,
+                    yoyo: true,
+                    ease: 'sine.inOut'
+                });
+
+                starContainer.appendChild(star);
+            }
+        }
+
+
+        // Start the application
+        init();
+    </script>
+
+</body>
+</html>
